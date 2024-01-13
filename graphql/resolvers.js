@@ -5,11 +5,19 @@ const resolvers = {
     Query: {
         getPost:async(_,{id})=>{
             const [rows] = await Pool.query('select * from posts where id = ?',[id]);
-            return rows[0];
+            const[comments] = await Pool.query('select * from comments where post_id = ?',[id]);
+            return {...rows[0], comments};
         },
         getAllPosts:async()=>{
-            const rows = await Pool.query('select * from posts');
-            return rows[0];
+            const [rows] = await Pool.query('select * from posts');
+            const posts = await Promise.all(
+                rows.map(async (post) => {
+                  const [commentRows] = await Pool.query('SELECT * FROM comments WHERE post_id = ?', [post.id]);
+                  post.comments = commentRows;
+                  return post;
+                })
+              );
+            return posts;
         }
     },
     Mutation:{
